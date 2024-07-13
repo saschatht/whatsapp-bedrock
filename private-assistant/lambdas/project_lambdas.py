@@ -2,9 +2,9 @@ import sys
 
 from aws_cdk import (
     Duration,
-    aws_lambda,
-    aws_ssm as ssm,
-    Stack
+    aws_lambda
+    #aws_ssm as ssm,
+    #Stack
 
 )
 
@@ -21,6 +21,7 @@ BASE_LAMBDA_CONFIG = dict (
 COMMON_LAMBDA_CONF = dict (runtime=aws_lambda.Runtime.PYTHON_3_11, **BASE_LAMBDA_CONFIG)
 
 from layers import Layers
+from cdk_aws_lambda_powertools_layer import LambdaPowertoolsLayer
 
 
 class Lambdas(Construct):
@@ -29,6 +30,7 @@ class Lambdas(Construct):
         super().__init__(scope, construct_id, **kwargs)
 
         Lay = Layers(self, 'Lay')
+        powertoolsLayer = LambdaPowertoolsLayer(self, 'PowertoolsLayer')
 
         self.whatsapp_in = aws_lambda.Function(
             self, "whatsapp_in", handler="lambda_function.lambda_handler",
@@ -54,7 +56,7 @@ class Lambdas(Construct):
             description ="Read the text from transcriber job" ,
             handler="lambda_function.lambda_handler",
             code=aws_lambda.Code.from_asset("./lambdas/code/transcriber_done"),
-            layers= [Lay.bs4_requests, Lay.common],**COMMON_LAMBDA_CONF)
+            layers= [Lay.bs4_requests, Lay.common, powertoolsLayer],**COMMON_LAMBDA_CONF)
     
         self.process_stream = aws_lambda.Function(
             self, "process_stream", 

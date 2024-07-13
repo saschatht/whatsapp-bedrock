@@ -9,13 +9,16 @@ from aws_cdk import (
     aws_s3_notifications,
     aws_s3 as s3,
     aws_lambda,
-    aws_lambda_event_sources
+    aws_lambda_event_sources,
+    aws_events as events,
+    aws_events_targets as targets
 )
 from constructs import Construct
 from lambdas import Lambdas
 from apis import WebhookApi
 from databases import Tables
 from s3_cloudfront import S3Deploy
+
 
 class PrivateAssistantStack(Stack):
 
@@ -33,7 +36,7 @@ class PrivateAssistantStack(Stack):
         model_id_v3 = "anthropic.claude-3-sonnet-20240229-v1:0"
         anthropic_version = "bedrock-2023-05-31"
         
-        DISPLAY_PHONE_NUMBER = 'YOU-NUMBER'
+        DISPLAY_PHONE_NUMBER = 'YOUR-NUMBER'
 
    
 
@@ -120,8 +123,22 @@ class PrivateAssistantStack(Stack):
         
         Fn.transcriber_done.add_environment( key='WHATSAPP_OUT', value=Fn.whatsapp_out.function_name )
         Fn.transcriber_done.add_to_role_policy(iam.PolicyStatement( actions=["dynamodb:*"], resources=[f"{Tbl.whatsapp_MetaData.table_arn}",f"{Tbl.whatsapp_MetaData.table_arn}/*"]))
+        #idempotency table role permissions
+        Fn.transcriber_done.add_to_role_policy(iam.PolicyStatement( actions=["dynamodb:*"], resources=[f"{Tbl.idempotency_table.table_arn}",f"{Tbl.idempotency_table.table_arn}/*"]))
+        #end idempotency table role permissiones
         Fn.transcriber_done.add_environment(key='ENV_INDEX_NAME', value="jobnameindex")
         Fn.transcriber_done.add_environment(key='ENV_KEY_NAME', value="messages_id")        
+        #event bridge rule for transcriber_job COMPLETE status        
+        rule = events.Rule(self, "TranscribeCompleteRule",
+                           event_pattern=events.EventPattern(
+                               source=["aws.transcribe"],
+                               detail_type=["Transcribe Job State Change"],
+                               detail={
+                                   "TranscriptionJobStatus": ["COMPLETED"]
+                               }
+                           ),
+                           targets=[targets.LambdaFunction(Fn.transcriber_done)]
+                           )
 
         Fn.whatsapp_out.grant_invoke(Fn.transcriber_done)
 

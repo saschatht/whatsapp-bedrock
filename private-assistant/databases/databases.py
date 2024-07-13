@@ -36,4 +36,14 @@ class Tables(Construct):
             self, "user_metadata", 
             partition_key=ddb.Attribute(name="phone_number", type=ddb.AttributeType.STRING),
             **TABLE_CONFIG)
+    #saschatht - idempotency table
+        self.idempotency_table = ddb.Table(
+            self,
+            "IdempotencyTable",
+            partition_key=ddb.Attribute(name="id", type=ddb.AttributeType.STRING),
+            billing_mode=ddb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+            time_to_live_attribute="expiration",
+            point_in_time_recovery=True,
+        )
         

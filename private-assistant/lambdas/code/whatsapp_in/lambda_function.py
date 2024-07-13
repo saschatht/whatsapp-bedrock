@@ -43,6 +43,13 @@ def lambda_handler(event, context):
 
     body = json.loads(event['body'])
     WHATS_TOKEN = 'Bearer ' + connect_config['WHATS_TOKEN']
+    wa_id = body['entry'][0]['changes'][0]['value']['contacts'][0]['wa_id']
+    fromm = body['entry'][0]['changes'][0]['value']['messages'][0]['from']
+    #saschatht: bug fix for whatsapp Mexico sending 13 numbers instead of 12 ie: +5215523456789 instead of +525523456789
+    if len(wa_id) > 12:
+        body['entry'][0]['changes'][0]['value']['contacts'][0]['wa_id'] = wa_id[:2]+wa_id[3:]
+        body['entry'][0]['changes'][0]['value']['messages'][0]['from'] = fromm[:2]+fromm[3:]
+        
 
     ##WhatsApp specific iterations. 
     for entry in body['entry']:
